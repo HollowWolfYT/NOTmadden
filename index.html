@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Madden Clone - 3D Football</title>
+  <style>
+    /* ============================================= */
+    /* RESET & BASE STYLES                          */
+    /* ============================================= */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ============================================= */
+    /* GAME CONTAINER                               */
+    /* ============================================= */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ============================================= */
+    /* LOADING SCREEN                               */
+    /* ============================================= */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0a1628 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loading-screen h1 {
+      font-size: 4rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+      margin-bottom: 2rem;
+      letter-spacing: 0.2em;
+    }
+
+    #loading-screen .subtitle {
+      font-size: 1.2rem;
+      color: #8899aa;
+      margin-bottom: 3rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    .progress-container {
+      width: 400px;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ffd700, #ff8c00);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .loading-text {
+      font-size: 0.9rem;
+      color: #667788;
+    }
+
+    /* ============================================= */
+    /* MAIN MENU                                    */
+    /* ============================================= */
+    #main-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0a1628 100%);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 900;
+    }
+
+    #main-menu.visible {
+      display: flex;
+    }
+
+    #main-menu h1 {
+      font-size: 5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.1em;
+    }
+
+    #main-menu .tagline {
+      font-size: 1.5rem;
+      color: #667788;
+      margin-bottom: 4rem;
+      letter-spacing: 0.2em;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .menu-btn {
+      padding: 1.2rem 4rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 300px;
+    }
+
+    .menu-btn.primary {
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      color: #000;
+    }
+
+    .menu-btn.primary:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    }
+
+    .menu-btn.secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+
+    .menu-btn.secondary:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    /* ============================================= */
+    /* HUD - SCOREBOARD                             */
+    /* ============================================= */
+    #hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+    }
+
+    #hud.visible {
+      display: block;
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 10px;
+    }
+
+    .scoreboard-inner {
+      display: flex;
+      background: rgba(0,0,0,0.85);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .team-score {
+      display: flex;
+      align-items: center;
+      padding: 8px 20px;
+      gap: 15px;
+    }
+
+    .team-score.home {
+      background: var(--home-color, #002244);
+    }
+
+    .team-score.away {
+      background: var(--away-color, #e31837);
+    }
+
+    .team-abbr {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .team-points {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .game-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 25px;
+      background: #1a1a1a;
+      min-width: 120px;
+    }
+
+    .quarter {
+      font-size: 0.8rem;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    .game-clock {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Down and Distance */
+    .down-distance {
+      display: flex;
+      justify-content: center;
+      margin-top: 5px;
+    }
+
+    .down-box {
+      background: rgba(0,0,0,0.85);
+      padding: 8px 30px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .down-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #ffd700;
+    }
+
+    .field-position {
+      font-size: 1rem;
+      color: #aaa;
+    }
+
+    /* ============================================= */
+    /* PLAY CLOCK                                   */
+    /* ============================================= */
+    .play-clock {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
+      background: rgba(0,0,0,0.85);
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border: 4px solid #333;
+      z-index: 101;
+    }
+
+    .play-clock.warning {
+      border-color: #ff4444;
+      animation: pulse 0.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .play-clock-value {
+      font-size: 2rem;
+      font-weight: 900;
+      font-family: 'Courier New', monospace;
+    }
+
+    .play-clock-label {
+      font-size: 0.6rem;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    /* ============================================= */
+    /* RECEIVER ICONS                               */
+    /* ============================================= */
+    .receiver-icons {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+      z-index: 101;
+    }
+
+    .receiver-icon {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,0,0,0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+
+    .receiver-icon.open {
+      border-color: #00ff00;
+      background: rgba(0,100,0,0.5);
+    }
+
+    .receiver-key {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      border-radius: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 900;
+      color: #000;
+      font-size: 1.1rem;
+    }
+
+    .receiver-pos {
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    /* ============================================= */
+    /* CONTROLS HINT                                */
+    /* ============================================= */
+    .controls-hint {
+      position: fixed;
+      bottom: 100px;
+      left: 20px;
+      background: rgba(0,0,0,0.7);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      color: #aaa;
+      z-index: 101;
+    }
+
+    .controls-hint kbd {
+      background: #333;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-family: monospace;
+      color: #ffd700;
+    }
+
+    /* ============================================= */
+    /* NOTIFICATION                                 */
+    /* ============================================= */
+    .notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.9);
+      padding: 30px 60px;
+      border-radius: 10px;
+      font-size: 3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      text-align: center;
+    }
+
+    .notification.visible {
+      opacity: 1;
+    }
+
+    .notification.touchdown {
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      color: #000;
+      animation: touchdown-anim 0.5s ease;
+    }
+
+    @keyframes touchdown-anim {
+      0% { transform: translate(-50%, -50%) scale(0.5); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .notification.incomplete {
+      color: #ff4444;
+      border: 3px solid #ff4444;
+    }
+
+    .notification.first-down {
+      color: #00ff00;
+      border: 3px solid #00ff00;
+    }
+
+    /* ============================================= */
+    /* PLAY CALL SCREEN                             */
+    /* ============================================= */
+    #play-call-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: none;
+      flex-direction: column;
+      z-index: 500;
+    }
+
+    #play-call-screen.visible {
+      display: flex;
+    }
+
+    .play-call-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: linear-gradient(180deg, #1a2a4a 0%, #0a1628 100%);
+      border-bottom: 2px solid #ffd700;
+    }
+
+    .play-call-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .close-play-call {
+      background: none;
+      border: 2px solid #fff;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .close-play-call:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    .formation-tabs {
+      display: flex;
+      gap: 10px;
+      padding: 20px 40px;
+      background: #111;
+    }
+
+    .formation-tab {
+      padding: 12px 30px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+    }
+
+    .formation-tab.active {
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      color: #000;
+    }
+
+    .formation-tab:hover:not(.active) {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .plays-grid {
+      flex: 1;
+      padding: 30px 40px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      overflow-y: auto;
+      align-content: start;
+    }
+
+    .play-card {
+      background: linear-gradient(180deg, #1a2a4a 0%, #0a1628 100%);
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      min-height: 320px;
+    }
+
+    .play-card canvas {
+      width: 100% !important;
+      height: 180px !important;
+      border-radius: 6px;
+      border: 1px solid #444;
+    }
+
+    .play-card:hover {
+      border-color: #ffd700;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+    }
+
+    .play-card .play-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+    }
+
+    .play-card .play-type {
+      font-size: 0.9rem;
+      padding: 5px 15px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .play-card .play-type.pass {
+      background: rgba(0, 150, 255, 0.3);
+      color: #00aaff;
+    }
+
+    .play-card .play-type.run {
+      background: rgba(0, 200, 0, 0.3);
+      color: #00cc00;
+    }
+
+    /* ============================================= */
+    /* PAUSE MENU                                   */
+    /* ============================================= */
+    #pause-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 600;
+    }
+
+    #pause-menu.visible {
+      display: flex;
+    }
+
+    #pause-menu h2 {
+      font-size: 4rem;
+      font-weight: 900;
+      color: #ffd700;
+      margin-bottom: 3rem;
+      text-transform: uppercase;
+    }
+
+    .pause-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ============================================= */
+    /* SNAP HINT                                    */
+    /* ============================================= */
+    .snap-hint {
+      position: fixed;
+      bottom: 200px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      padding: 15px 40px;
+      border-radius: 30px;
+      border: 2px solid #ffd700;
+      z-index: 101;
+      animation: float 2s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    .snap-hint span {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .snap-hint kbd {
+      background: linear-gradient(180deg, #ffd700 0%, #ff8c00 100%);
+      color: #000;
+      padding: 5px 15px;
+      border-radius: 4px;
+      font-weight: 900;
+      margin: 0 5px;
+    }
+    /* ============================================= */
+    /* ENHANCED MENU ANIMATIONS                     */
+    /* ============================================= */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes glow {
+      0%, 100% {
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+      }
+      50% {
+        text-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 140, 0, 0.4);
+      }
+    }
+
+    #main-menu h1 {
+      animation: glow 2s ease-in-out infinite, fadeInUp 0.8s ease-out;
+    }
+
+    #main-menu .tagline {
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .menu-btn {
+      animation: fadeInUp 0.8s ease-out both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .menu-btn:nth-child(1) { animation-delay: 0.4s; }
+    .menu-btn:nth-child(2) { animation-delay: 0.5s; }
+    .menu-btn:nth-child(3) { animation-delay: 0.6s; }
+
+    .menu-btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .menu-btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .menu-btn span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ============================================= */
+    /* CELEBRATION ANIMATIONS                       */
+    /* ============================================= */
+    @keyframes celebrate {
+      0%, 100% {
+        transform: scale(1) rotate(0deg);
+      }
+      25% {
+        transform: scale(1.2) rotate(-5deg);
+      }
+      75% {
+        transform: scale(1.2) rotate(5deg);
+      }
+    }
+
+    .notification.touchdown {
+      animation: celebrate 0.5s ease-in-out;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .notification.first-down {
+      animation: slideInRight 0.5s ease-out;
+    }
+
+  </style>
+  <script type="module" crossorigin src="/REPO_NAME/assets/index-B7EF3mou.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <h1>GRIDIRON</h1>
+    <div class="subtitle">Football Simulation</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="loading-text" id="loading-text">Loading assets...</div>
+  </div>
+
+  <!-- Main Menu -->
+  <div id="main-menu">
+    <h1>GRIDIRON</h1>
+    <div class="tagline">FOOTBALL SIMULATION</div>
+    <div class="menu-buttons">
+      <button class="menu-btn primary" id="quick-play-btn">Quick Play</button>
+      <button class="menu-btn secondary" id="exhibition-btn">Exhibition</button>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="scoreboard">
+      <div class="scoreboard-inner">
+        <div class="team-score home" id="home-team-display">
+          <span class="team-abbr" id="home-abbr">HOME</span>
+          <span class="team-points" id="home-score">0</span>
+        </div>
+        <div class="game-info">
+          <span class="quarter" id="quarter-display">1ST QTR</span>
+          <span class="game-clock" id="game-clock">5:00</span>
+        </div>
+        <div class="team-score away" id="away-team-display">
+          <span class="team-points" id="away-score">0</span>
+          <span class="team-abbr" id="away-abbr">AWAY</span>
+        </div>
+      </div>
+    </div>
+    <div class="down-distance">
+      <div class="down-box">
+        <span class="down-text" id="down-text">1ST & 10</span>
+        <span class="field-position" id="field-pos">OWN 25</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Play Clock -->
+  <div class="play-clock" id="play-clock" style="display: none;">
+    <span class="play-clock-value" id="play-clock-value">40</span>
+    <span class="play-clock-label">Play Clock</span>
+  </div>
+
+  <!-- Receiver Icons -->
+  <div class="receiver-icons" id="receiver-icons" style="display: none;"></div>
+
+  <!-- Controls Hint -->
+  <div class="controls-hint" id="controls-hint" style="display: none;">
+    <div><kbd>WASD</kbd> Move</div>
+    <div><kbd>SHIFT</kbd> Sprint</div>
+    <div><kbd>1-5</kbd> Pass</div>
+    <div><kbd>TAB</kbd> Play Call</div>
+    <div><kbd>ESC</kbd> Pause</div>
+  </div>
+
+  <!-- Snap Hint -->
+  <div class="snap-hint" id="snap-hint" style="display: none;">
+    <span>Press <kbd>SPACE</kbd> to snap the ball</span>
+  </div>
+
+  <!-- Notification -->
+  <div class="notification" id="notification"></div>
+
+  <!-- Play Call Screen -->
+  <div id="play-call-screen">
+    <div class="play-call-header">
+      <span class="play-call-title">Select Play</span>
+      <button class="close-play-call" id="close-play-call">Close (TAB)</button>
+    </div>
+    <div class="formation-tabs" id="formation-tabs"></div>
+    <div class="plays-grid" id="plays-grid"></div>
+  </div>
+
+  <!-- Pause Menu -->
+  <div id="pause-menu">
+    <h2>Paused</h2>
+    <div class="pause-buttons">
+      <button class="menu-btn primary" id="resume-btn">Resume</button>
+      <button class="menu-btn secondary" id="quit-btn">Quit to Menu</button>
+    </div>
+  </div>
+
+</body>
+</html>
